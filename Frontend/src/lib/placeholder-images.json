@@ -1,0 +1,58 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "A stylish person using a phone for virtual shopping.",
+      "imageUrl": "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxzaG9wcGluZyUyMGZhc2hpb258ZW58MHx8fHwxNzY4MzE4MjMwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "fashion shopping"
+    },
+    {
+      "id": "user-placeholder",
+      "description": "A placeholder image for a user in a neutral stance for virtual try-on.",
+      "imageUrl": "https://images.unsplash.com/photo-1529797228130-fe918ce6d915?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZXJzb24lMjBzdGFuZGluZ3xlbnwwfHx8fDE3NjgzMTY5OTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person standing"
+    },
+    {
+      "id": "garment-1",
+      "description": "A futuristic bomber jacket.",
+      "imageUrl": "https://images.unsplash.com/photo-1629353689974-af4d5c70440f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxib21iZXIlMjBqYWNrZXR8ZW58MHx8fHwxNzY4Mjg0NjE0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "bomber jacket"
+    },
+    {
+      "id": "garment-2",
+      "description": "Cyberpunk-style cargo pants.",
+      "imageUrl": "https://images.unsplash.com/photo-1600803177171-b9fbcc3018f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjYXJnbyUyMHBhbnRzfGVufDB8fHx8MTc2ODI3NzM5M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cargo pants"
+    },
+    {
+      "id": "garment-3",
+      "description": "A sleek, minimalist tech-wear t-shirt.",
+      "imageUrl": "https://images.unsplash.com/photo-1576417677416-6ca3adfb5435?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHx0LXNoaXJ0fGVufDB8fHx8MTc2ODMxODIzMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "t-shirt white"
+    },
+    {
+      "id": "garment-4",
+      "description": "A holographic-sheen dress.",
+      "imageUrl": "https://images.unsplash.com/photo-1601401031947-9cdea53e4886?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxob2xvZ3JhcGhpYyUyMGRyZXNzfGVufDB8fHx8MTc2ODMxODIzMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "holographic dress"
+    },
+    {
+      "id": "garment-5",
+      "description": "An augmented reality hoodie.",
+      "imageUrl": "https://images.unsplash.com/photo-1517942420142-6a296f9ee4b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8aG9vZGllfGVufDB8fHx8MTc2ODMxMTIzM3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hoodie"
+    },
+    {
+      "id": "garment-6",
+      "description": "Neon-trimmed athletic shorts.",
+      "imageUrl": "https://images.unsplash.com/photo-1760173602761-1cb729e81379?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YXRobGV0aWMlMjBzaG9ydHN8ZW58MHx8fHwxNzY4MjI0MjkyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "athletic shorts"
+    },
+    {
+      "id": "wardrobe-jeans",
+      "description": "A pair of folded jeans.",
+      "imageUrl": "https://images.unsplash.com/photo-1664095885291-80e42e5692ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxmb2xkZWQlMjBqZWFuc3xlbnwwfHx8fDE3NjgyMjAzMTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "folded jeans"
+    }
+  ]
+}
