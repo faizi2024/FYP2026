@@ -6,10 +6,11 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { Separator } from '@/components/ui/separator';
 
-const formSchema = z.object({
+// 1. Define the validation schema
+const signupSchema = z.object({ // 👈 Changed name to signupSchema for consistency
   name: z.string().min(1, { message: 'Name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters.' }),
@@ -18,8 +19,9 @@ const formSchema = z.object({
 export function SignupForm() {
   const { signup, loading } = useAuth();
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  // 2. Initialize the form
+  const form = useForm<z.infer<typeof signupSchema>>({
+    resolver: zodResolver(signupSchema),
     defaultValues: {
       name: '',
       email: '',
@@ -27,14 +29,17 @@ export function SignupForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    signup(values.email, values.name);
+  // 3. Updated onSubmit to pass name, email, AND password
+  function onSubmit(values: z.infer<typeof signupSchema>) {
+    console.log("Attempting signup for:", values.email);
+    signup(values.name, values.email, values.password); 
   }
 
   return (
     <div className="grid gap-6">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+          {/* Name Field */}
           <FormField
             control={form.control}
             name="name"
@@ -48,6 +53,8 @@ export function SignupForm() {
               </FormItem>
             )}
           />
+
+          {/* Email Field */}
           <FormField
             control={form.control}
             name="email"
@@ -61,6 +68,8 @@ export function SignupForm() {
               </FormItem>
             )}
           />
+
+          {/* Password Field */}
           <FormField
             control={form.control}
             name="password"
@@ -74,11 +83,13 @@ export function SignupForm() {
               </FormItem>
             )}
           />
+
           <Button type="submit" disabled={loading} className="w-full font-bold">
             {loading ? 'Creating Account...' : 'Sign Up'}
           </Button>
         </form>
       </Form>
+
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <Separator />
@@ -87,7 +98,8 @@ export function SignupForm() {
           <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
         </div>
       </div>
-      <Button variant="outline" disabled={loading}>
+
+      <Button variant="outline" disabled={loading} className="w-full">
         Google
       </Button>
     </div>

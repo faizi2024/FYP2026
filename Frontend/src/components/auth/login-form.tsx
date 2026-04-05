@@ -5,9 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -25,8 +25,10 @@ export function LoginForm() {
     },
   });
 
+  // FIXED: Added values.password to the function call
   function onSubmit(values: z.infer<typeof formSchema>) {
-    login(values.email);
+    console.log("Submitting login for:", values.email); // Debug log
+    login(values.email, values.password); 
   }
 
   return (
@@ -72,7 +74,7 @@ export function LoginForm() {
           <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
         </div>
       </div>
-      <Button variant="outline" disabled={loading}>
+      <Button variant="outline" disabled={loading} className="w-full">
         Google
       </Button>
     </div>

@@ -1,26 +1,26 @@
-export type UserProfile = {
-  uid: string;
-  email: string | null;
-  name: string | null;
-  photoURL: string | null;
-  measurements?: {
-    heightCm: number;
-    weightKg: number;
-    chestCm: number;
-    waistCm: number;
-  };
-};
+import { z } from 'genkit';
 
-export type Garment = {
-  id: string;
-  name: string;
-  type: string;
-  imageUrl: string;
-  imageHint: string;
-  price: number;
-  measurements: {
-    chestCm: number;
-    waistCm: number;
-    lengthCm: number;
-  };
-};
+// 1. Define the Schemas
+export const GarmentSuggestionInputSchema = z.object({
+  heightCm: z.number(),
+  weightKg: z.number(),
+  chestCm: z.number(),
+  waistCm: z.number(),
+  pastTryOnHistory: z.string().optional(),
+});
+
+export const GarmentSuggestionOutputSchema = z.object({
+  suggestions: z.array(z.object({
+    garmentName: z.string(),
+    garmentType: z.string(),
+    suggestedColor: z.string(),
+    colorReasoning: z.string(),
+    fitNotes: z.string(),
+    styleNotes: z.string(),
+    occasion: z.string()
+  }))
+});
+
+// 2. Export types for use in functions
+export type GarmentSuggestionInput = z.infer<typeof GarmentSuggestionInputSchema>;
+export type GarmentSuggestionOutput = z.infer<typeof GarmentSuggestionOutputSchema>;

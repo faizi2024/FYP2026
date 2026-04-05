@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MeasurementsForm } from "@/components/profile/measurements-form";
+import { MeasurementsForm } from "@/components/profile/measurement-form";
 
 export default function ProfilePage() {
     return (

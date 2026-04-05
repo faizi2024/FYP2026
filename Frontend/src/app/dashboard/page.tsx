@@ -1,7 +1,7 @@
 'use client';
 
 import { PageHeader } from '@/components/shared/page-header';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { ArrowRight, Scan, Shirt, User, RectangleHorizontal, Shield, WandSparkles } from 'lucide-react';
