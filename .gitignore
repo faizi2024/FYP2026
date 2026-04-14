@@ -1,5 +1,37 @@
+# --- Your Original Rules ---
 node_modules/
 .vscode/
 .env
 __pycache__/
 *.zip
+
+# --- Python & FastAPI Specifics ---
+.venv/
+venv/
+*.py[cod]
+.pytest_cache/
+# Ignore local environment settings
+.python-version
+
+# --- AI & Image Processing (FYP Specific) ---
+# Prevents committing heavy datasets or test uploads
+AI-Services/data/
+AI-Services/uploads/
+AI-Services/output/
+
+# MediaPipe / OpenCV temporary debug files
+# (Useful if your processor.py saves landmark checks)
+debug_*.jpg
+debug_*.png
+
+# --- Large Model Files ---
+# If you download weights for try-on models (like VITON or custom weights)
+*.pth
+*.pt
+*.onnx
+*.bin
+*.h5
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
