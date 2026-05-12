@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Virtual Try-On · Layellpur Innovation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ── CSS Variables ─────────────────────────────────────────── */
+:root {
+  --bg:        #0a0a0f;
+  --surface:   #12121a;
+  --border:    #1e1e2e;
+  --accent:    #7c3aed;
+  --accent2:   #06b6d4;
+  --success:   #10b981;
+  --warn:      #f59e0b;
+  --danger:    #ef4444;
+  --text:      #f0f0f8;
+  --muted:     #6b6b8a;
+  --glow:      0 0 40px rgba(124,58,237,0.35);
+  --radius:    20px;
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;border:none;outline:none;font-family:inherit}
+
+/* ── Grain overlay ─────────────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:.4;mix-blend-mode:overlay
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN MANAGER
+══════════════════════════════════════════════════════════════ */
+.screen{display:none;position:fixed;inset:0;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px}
+.screen.active{display:flex}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 1 — LANDING
+══════════════════════════════════════════════════════════════ */
+#screen-landing{
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.18) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 80%, rgba(6,182,212,0.12) 0%, transparent 60%),
+              var(--bg);
+  gap:0
+}
+
+.brand-badge{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,0.05);border:1px solid var(--border);
+  border-radius:100px;padding:8px 18px;margin-bottom:40px;
+  font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);
+  animation:fadeSlideDown 0.6s ease both
+}
+.brand-badge span.dot{width:6px;height:6px;border-radius:50%;
+  background:var(--success);box-shadow:0 0 8px var(--success);
+  animation:pulse 2s infinite}
+
+.hero-title{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(2.6rem,9vw,4rem);
+  line-height:1.0;text-align:center;margin-bottom:12px;
+  animation:fadeSlideUp 0.7s 0.1s ease both
+}
+.hero-title em{
+  font-style:normal;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text
+}
+
+.hero-sub{
+  font-size:15px;color:var(--muted);text-align:center;line-height:1.6;
+  max-width:300px;margin-bottom:52px;font-weight:300;
+  animation:fadeSlideUp 0.7s 0.2s ease both
+}
+
+/* Garment selector strip */
+.garment-strip{
+  display:flex;gap:12px;margin-bottom:44px;overflow-x:auto;
+  padding:4px 0;scrollbar-width:none;width:100%;max-width:400px;
+  animation:fadeSlideUp 0.7s 0.3s ease both
+}
+.garment-strip::-webkit-scrollbar{display:none}
+
+.garment-card{
+  flex-shrink:0;width:72px;height:72px;border-radius:14px;
+  border:2px solid var(--border);background:var(--surface);
+  overflow:hidden;cursor:pointer;transition:all 0.25s;position:relative;
+  display:flex;align-items:center;justify-content:center
+}
+.garment-card img{width:56px;height:56px;object-fit:contain;border-radius:8px}
+.garment-card.active{border-color:var(--accent);box-shadow:0 0 0 4px rgba(124,58,237,0.2)}
+.garment-card .emoji{font-size:28px}
+.garment-card.active::after{
+  content:'✓';position:absolute;bottom:3px;right:5px;
+  font-size:10px;color:var(--accent);font-weight:700
+}
+
+/* CTA button */
+.btn-primary{
+  width:100%;max-width:320px;height:60px;border-radius:16px;
+  background:linear-gradient(135deg,var(--accent),#5b21b6);
+  color:#fff;font-family:'Syne',sans-serif;font-weight:700;
+  font-size:17px;letter-spacing:0.03em;
+  box-shadow:var(--glow);transition:all 0.2s;
+  animation:fadeSlideUp 0.7s 0.4s ease both;position:relative;overflow:hidden
+}
+.btn-primary::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent);
+  opacity:0;transition:opacity 0.2s
+}
+.btn-primary:active{transform:scale(0.97)}
+.btn-primary:hover::before{opacity:1}
+
+.btn-secondary{
+  margin-top:16px;background:transparent;color:var(--muted);
+  font-size:13px;text-decoration:underline;
+  animation:fadeSlideUp 0.7s 0.5s ease both
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 2 — PERMISSION REQUEST
+══════════════════════════════════════════════════════════════ */
+#screen-permission{gap:24px;text-align:center}
+
+.perm-icon{
+  width:100px;height:100px;border-radius:28px;
+  background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:44px;
+  animation:float 3s ease-in-out infinite
+}
+.perm-title{font-family:'Syne',sans-serif;font-weight:700;font-size:24px}
+.perm-desc{color:var(--muted);font-size:14px;line-height:1.7;max-width:280px}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 3 — TRY-ON CAMERA VIEW
+══════════════════════════════════════════════════════════════ */
+#screen-tryon{padding:0;background:#000;justify-content:flex-start}
+
+/* Camera feed */
+#video-container{
+  position:relative;width:100%;
+  height:calc(100vh - 160px);
+  overflow:hidden;background:#000
+}
+#video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#canvas-out{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;transform:scaleX(-1)
+}
+
+/* Scanning frame overlay */
+.scan-frame{
+  position:absolute;inset:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center
+}
+.scan-corner{
+  position:absolute;width:40px;height:40px;
+  border-color:rgba(124,58,237,0.8);border-style:solid;border-width:0
+}
+.scan-corner.tl{top:15%;left:10%;border-top-width:3px;border-left-width:3px;border-radius:8px 0 0 0}
+.scan-corner.tr{top:15%;right:10%;border-top-width:3px;border-right-width:3px;border-radius:0 8px 0 0}
+.scan-corner.bl{bottom:15%;left:10%;border-bottom-width:3px;border-left-width:3px;border-radius:0 0 0 8px}
+.scan-corner.br{bottom:15%;right:10%;border-bottom-width:3px;border-right-width:3px;border-radius:0 0 8px 0}
+
+/* Status pill */
+#status-pill{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  padding:6px 16px;border-radius:100px;font-size:12px;font-weight:500;
+  letter-spacing:0.06em;text-transform:uppercase;backdrop-filter:blur(12px);
+  transition:all 0.3s;white-space:nowrap
+}
+#status-pill.tracking{background:rgba(16,185,129,0.25);border:1px solid rgba(16,185,129,0.5);color:#6ee7b7}
+#status-pill.connecting{background:rgba(245,158,11,0.25);border:1px solid rgba(245,158,11,0.5);color:#fcd34d}
+#status-pill.error{background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.5);color:#fca5a5}
+
+/* Latency badge */
+#latency-badge{
+  position:absolute;top:16px;right:12px;
+  padding:5px 10px;border-radius:100px;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);
+  font-size:11px;color:var(--muted);border:1px solid var(--border)
+}
+
+/* Bottom controls */
+#bottom-bar{
+  position:relative;width:100%;height:160px;
+  background:linear-gradient(to top, var(--bg) 60%, transparent);
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;padding:0 20px 16px;flex-shrink:0
+}
+
+/* Garment switcher in camera view */
+.cam-garment-strip{
+  display:flex;gap:10px;overflow-x:auto;width:100%;
+  padding:2px 0;scrollbar-width:none
+}
+.cam-garment-strip::-webkit-scrollbar{display:none}
+
+.cam-garment-btn{
+  flex-shrink:0;width:52px;height:52px;border-radius:12px;
+  border:2px solid var(--border);background:rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;cursor:pointer;transition:all 0.2s
+}
+.cam-garment-btn.active{border-color:var(--accent);background:rgba(124,58,237,0.15)}
+.cam-garment-btn img{width:36px;height:36px;object-fit:contain;border-radius:6px}
+
+/* Action row */
+.action-row{display:flex;gap:12px;width:100%;justify-content:center}
+
+.btn-capture{
+  flex:1;max-width:160px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,var(--accent),#5b21b6);
+  color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  box-shadow:0 4px 20px rgba(124,58,237,0.4);display:flex;align-items:center;
+  justify-content:center;gap:8px
+}
+.btn-capture:active{transform:scale(0.96)}
+
+.btn-icon{
+  width:48px;height:48px;border-radius:14px;
+  background:rgba(255,255,255,0.07);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  color:var(--muted);transition:all 0.2s
+}
+.btn-icon:active{background:rgba(255,255,255,0.12);transform:scale(0.95)}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 4 — CAPTURED PHOTO
+══════════════════════════════════════════════════════════════ */
+#screen-capture{padding:0;background:#000;justify-content:flex-start}
+
+#captured-img{width:100%;height:calc(100vh - 120px);object-fit:cover}
+
+.capture-actions{
+  width:100%;height:120px;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;gap:16px;padding:0 24px
+}
+.btn-save{
+  flex:1;height:52px;border-radius:14px;
+  background:linear-gradient(135deg,var(--success),#059669);
+  color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;
+  display:flex;align-items:center;justify-content:center;gap:8px
+}
+.btn-retake{
+  flex:1;height:52px;border-radius:14px;
+  background:rgba(255,255,255,0.07);border:1px solid var(--border);
+  color:var(--text);font-family:'Syne',sans-serif;font-weight:600;font-size:15px;
+  display:flex;align-items:center;justify-content:center;gap:8px
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 5 — CONNECTION ERROR
+══════════════════════════════════════════════════════════════ */
+#screen-error{gap:20px;text-align:center}
+.err-icon{font-size:56px;animation:shake 0.5s ease}
+.err-title{font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:var(--danger)}
+.err-msg{color:var(--muted);font-size:14px;line-height:1.7;max-width:290px}
+.err-url{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;font-size:13px;color:var(--accent2);word-break:break-all;
+  font-family:monospace;width:100%;max-width:320px
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOADING SPINNER OVERLAY
+══════════════════════════════════════════════════════════════ */
+#loader{
+  display:none;position:fixed;inset:0;background:rgba(10,10,15,0.8);
+  backdrop-filter:blur(8px);z-index:500;
+  align-items:center;justify-content:center;flex-direction:column;gap:16px
+}
+#loader.show{display:flex}
+.spinner{
+  width:44px;height:44px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin 0.8s linear infinite
+}
+.loader-text{color:var(--muted);font-size:14px}
+
+/* ══════════════════════════════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════════════════════════════ */
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlideDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes ripple{0%{transform:scale(0);opacity:0.6}100%{transform:scale(2.5);opacity:0}}
+</style>
+</head>
+<body>
+
+<!-- ══ LOADER ════════════════════════════════════════════════ -->
+<div id="loader">
+  <div class="spinner"></div>
+  <div class="loader-text" id="loader-text">Connecting to server…</div>
+</div>
+
+<!-- ══ SCREEN 1: LANDING ═════════════════════════════════════ -->
+<div class="screen active" id="screen-landing">
+
+  <div class="brand-badge">
+    <span class="dot"></span>
+    Layellpur Innovation 2026
+  </div>
+
+  <h1 class="hero-title">
+    Wear It<br/>
+    <em>Before</em><br/>
+    You Buy
+  </h1>
+
+  <p class="hero-sub">
+    Point your camera at yourself and see any shirt on you — instantly.
+  </p>
+
+  <!-- Garment picker -->
+  <div class="garment-strip" id="garment-strip-landing">
+    <!-- populated by JS -->
+  </div>
+
+  <button class="btn-primary" id="btn-start-tryon">
+    ✦ Start Try-On
+  </button>
+  <button class="btn-secondary" id="btn-how">How does it work?</button>
+
+</div>
+
+<!-- ══ SCREEN 2: PERMISSION ══════════════════════════════════ -->
+<div class="screen" id="screen-permission">
+  <div class="perm-icon">📷</div>
+  <h2 class="perm-title">Camera Access</h2>
+  <p class="perm-desc">
+    We need your front camera to overlay the garment on you in real-time. 
+    No video is stored or sent anywhere except your screen.
+  </p>
+  <button class="btn-primary" id="btn-grant-camera" style="max-width:260px">
+    Allow Camera
+  </button>
+  <button class="btn-secondary" id="btn-back-from-perm">← Back</button>
+</div>
+
+<!-- ══ SCREEN 3: TRY-ON ══════════════════════════════════════ -->
+<div class="screen" id="screen-tryon">
+
+  <!-- Video + processed canvas -->
+  <div id="video-container">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas-out"></canvas>
+
+    <!-- Corner guides -->
+    <div class="scan-frame">
+      <div class="scan-corner tl"></div>
+      <div class="scan-corner tr"></div>
+      <div class="scan-corner bl"></div>
+      <div class="scan-corner br"></div>
+    </div>
+
+    <!-- Status + latency -->
+    <div id="status-pill" class="connecting">● Connecting</div>
+    <div id="latency-badge">-- ms</div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div id="bottom-bar">
+    <!-- Garment row -->
+    <div class="cam-garment-strip" id="cam-garment-strip">
+      <!-- populated by JS -->
+    </div>
+    <!-- Buttons -->
+    <div class="action-row">
+      <button class="btn-icon" id="btn-flip" title="Flip camera">🔄</button>
+      <button class="btn-capture" id="btn-capture">
+        📸 Capture
+      </button>
+      <button class="btn-icon" id="btn-exit-cam" title="Exit">✕</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ SCREEN 4: CAPTURED PHOTO ══════════════════════════════ -->
+<div class="screen" id="screen-capture">
+  <img id="captured-img" src="" alt="Captured try-on"/>
+  <div class="capture-actions">
+    <button class="btn-retake" id="btn-retake">↩ Retake</button>
+    <button class="btn-save"   id="btn-save">⬇ Save Photo</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 5: ERROR ═══════════════════════════════════════ -->
+<div class="screen" id="screen-error">
+  <div class="err-icon">⚡</div>
+  <h2 class="err-title">Can't Connect</h2>
+  <p class="err-msg" id="err-msg">
+    Make sure you're on the same Wi-Fi as the Try-On server.
+  </p>
+  <div class="err-url" id="err-url">—</div>
+  <button class="btn-primary" id="btn-retry" style="max-width:260px;margin-top:8px">
+    Retry Connection
+  </button>
+  <button class="btn-secondary" id="btn-err-back">← Back to Home</button>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Configuration ─────────────────────────────────────────────
+   SERVER_URL is read from the query string ?server=http://IP:PORT
+   so the QR code just needs to encode:
+     http://<your-laptop-ip>:8080/?server=http://<your-laptop-ip>:3001
+   ─────────────────────────────────────────────────────────── */
+const params     = new URLSearchParams(window.location.search);
+const SERVER_URL = params.get("server") || `http://${location.hostname}:3001`;
+const TRYON_ENDPOINT = `${SERVER_URL}/tryon`;
+
+/* Garment catalogue — add your actual garment filenames here */
+const GARMENTS = [
+  { id: "g1", label: "Navy Tee",    emoji: "👕", file: "garment.png"    },
+  { id: "g2", label: "White Shirt", emoji: "👔", file: "garment2.png"   },
+  { id: "g3", label: "Black Tee",   emoji: "🖤", file: "garment3.png"   },
+  { id: "g4", label: "Hoodie",      emoji: "🧥", file: "garment4.png"   },
+];
+
+let activeGarment = GARMENTS[0].file;
+let stream        = null;
+let facingMode    = "user";
+let isRunning     = false;
+let capturedDataURL = null;
+let frameLoop     = null;
+
+/* ── Screen router ─────────────────────────────────────────── */
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function loader(on, text = "Please wait…") {
+  const el = document.getElementById("loader");
+  el.classList.toggle("show", on);
+  document.getElementById("loader-text").textContent = text;
+}
+
+/* ── Garment strip builder ─────────────────────────────────── */
+function buildGarmentStrip(containerId, btnClass) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = "";
+  GARMENTS.forEach((g, i) => {
+    const btn = document.createElement("div");
+    btn.className = `${btnClass} ${i === 0 ? "active" : ""}`;
+    btn.innerHTML = `<span>${g.emoji}</span>`;
+    btn.title = g.label;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(`.${btnClass}`)
+        .forEach(b => b.classList.remove("active"));
+      // sync both strips
+      document.querySelectorAll(`.${btnClass}`)[i]?.classList.add("active");
+      document.querySelectorAll(".garment-card")[i]?.classList.add("active");
+      document.querySelectorAll(".cam-garment-btn")[i]?.classList.add("active");
+      activeGarment = g.file;
+    });
+    c.appendChild(btn);
+  });
+}
+
+function buildLandingStrip() {
+  const c = document.getElementById("garment-strip-landing");
+  c.innerHTML = "";
+  GARMENTS.forEach((g, i) => {
+    const div = document.createElement("div");
+    div.className = `garment-card ${i === 0 ? "active" : ""}`;
+    div.innerHTML = `<span class="emoji">${g.emoji}</span>`;
+    div.title = g.label;
+    div.addEventListener("click", () => {
+      document.querySelectorAll(".garment-card").forEach(b => b.classList.remove("active"));
+      div.classList.add("active");
+      activeGarment = g.file;
+    });
+    c.appendChild(div);
+  });
+}
+
+/* ── Camera ────────────────────────────────────────────────── */
+async function startCamera() {
+  if (stream) stopCamera();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 720 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+    const video = document.getElementById("video");
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+    video.play();
+
+    // Size canvas to video
+    const canvas = document.getElementById("canvas-out");
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  isRunning = false;
+  if (frameLoop) { clearTimeout(frameLoop); frameLoop = null; }
+}
+
+/* ── Frame capture + send to server ───────────────────────── */
+const captureCanvas = document.createElement("canvas");
+const captureCtx    = captureCanvas.getContext("2d");
+
+async function sendFrame() {
+  if (!isRunning) return;
+
+  const video = document.getElementById("video");
+  if (video.readyState < 2) { frameLoop = setTimeout(sendFrame, 80); return; }
+
+  // Capture frame
+  captureCanvas.width  = video.videoWidth;
+  captureCanvas.height = video.videoHeight;
+  captureCtx.drawImage(video, 0, 0);
+  const b64 = captureCanvas.toDataURL("image/jpeg", 0.82).split(",")[1];
+
+  const pill    = document.getElementById("status-pill");
+  const latency = document.getElementById("latency-badge");
+
+  try {
+    const t0  = performance.now();
+    const res = await fetch(TRYON_ENDPOINT, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ frame: b64, garment: activeGarment }),
+      signal:  AbortSignal.timeout(3000),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const ms   = Math.round(performance.now() - t0);
+
+    latency.textContent = `${ms}ms`;
+
+    if (data.success && data.frame) {
+      // Draw processed frame onto overlay canvas
+      const img = new Image();
+      img.onload = () => {
+        const c   = document.getElementById("canvas-out");
+        const ctx = c.getContext("2d");
+        c.width   = img.width;
+        c.height  = img.height;
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = "data:image/jpeg;base64," + data.frame;
+
+      pill.className     = "connecting tracking";
+      pill.textContent   = "● Tracking";
+      pill.className     = "status-pill tracking";
+    } else {
+      pill.className   = "status-pill connecting";
+      pill.textContent = "● Searching…";
+    }
+
+  } catch(e) {
+    pill.className   = "status-pill error";
+    pill.textContent = "● No Signal";
+    latency.textContent = "—";
+  }
+
+  // Schedule next frame (~16–30 fps depending on server speed)
+  if (isRunning) frameLoop = setTimeout(sendFrame, 33);
+}
+
+/* ── Connection test ───────────────────────────────────────── */
+async function testConnection() {
+  try {
+    const res = await fetch(`${SERVER_URL}/health`, {
+      signal: AbortSignal.timeout(4000)
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+/* ── Event Handlers ────────────────────────────────────────── */
+
+// Landing → permission check
+document.getElementById("btn-start-tryon").addEventListener("click", async () => {
+  // Quick server check first
+  loader(true, "Checking server connection…");
+  const ok = await testConnection();
+  loader(false);
+
+  if (!ok) {
+    document.getElementById("err-url").textContent = TRYON_ENDPOINT;
+    document.getElementById("err-msg").textContent =
+      `Could not reach the Try-On server. Make sure you're on the same Wi-Fi network.`;
+    show("screen-error");
+    return;
+  }
+  show("screen-permission");
+});
+
+// Permission → camera start
+document.getElementById("btn-grant-camera").addEventListener("click", async () => {
+  loader(true, "Starting camera…");
+  const ok = await startCamera();
+  loader(false);
+
+  if (!ok) {
+    alert("Camera access denied. Please allow camera permissions and try again.");
+    return;
+  }
+  isRunning = true;
+  show("screen-tryon");
+  sendFrame();
+});
+
+document.getElementById("btn-back-from-perm").addEventListener("click", () => show("screen-landing"));
+
+// Flip camera
+document.getElementById("btn-flip").addEventListener("click", async () => {
+  facingMode = facingMode === "user" ? "environment" : "user";
+  isRunning  = false;
+  if (frameLoop) clearTimeout(frameLoop);
+  await startCamera();
+  isRunning = true;
+  sendFrame();
+});
+
+// Capture
+document.getElementById("btn-capture").addEventListener("click", () => {
+  const c   = document.getElementById("canvas-out");
+  capturedDataURL = c.toDataURL("image/jpeg", 0.95);
+  document.getElementById("captured-img").src = capturedDataURL;
+  isRunning = false;
+  if (frameLoop) clearTimeout(frameLoop);
+  show("screen-capture");
+});
+
+// Exit camera
+document.getElementById("btn-exit-cam").addEventListener("click", () => {
+  isRunning = false;
+  stopCamera();
+  show("screen-landing");
+});
+
+// Retake
+document.getElementById("btn-retake").addEventListener("click", () => {
+  isRunning = true;
+  show("screen-tryon");
+  sendFrame();
+});
+
+// Save photo
+document.getElementById("btn-save").addEventListener("click", () => {
+  const a    = document.createElement("a");
+  a.href     = capturedDataURL;
+  a.download = `layellpur-tryon-${Date.now()}.jpg`;
+  a.click();
+});
+
+// Error screen
+document.getElementById("btn-retry").addEventListener("click", () => show("screen-landing"));
+document.getElementById("btn-err-back").addEventListener("click", () => show("screen-landing"));
+
+/* ── Init ──────────────────────────────────────────────────── */
+buildLandingStrip();
+buildGarmentStrip("cam-garment-strip", "cam-garment-btn");
+</script>
+</body>
+</html>

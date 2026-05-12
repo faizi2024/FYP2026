@@ -1,0 +1,39 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+package-lock.json
+
+# Python virtual environment
+venv/
+ENV/
+env/
+bin/
+lib/
+include/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SSL Certificates (Seen in image_8e669c.png)
+*.pem
+*.key
+cert.pem
+key.pem
+
+# Environment variables / Secrets
+.env
+.flaskenv
+
+# Large Media / Temporary Images (Optional)
+# If garment.png and qr.png are just test files, keep them ignored
+garment.png
+qr.png
+pose_skeleton.jpg
+vto_preview.jpg
+vto_tps_result.jpg
+
+# OS specific files
+.DS_Store
+Thumbs.db
