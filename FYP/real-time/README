@@ -1,0 +1,247 @@
+# 🧥 Virtual Try-On Engine v10 — Hybrid Live Warp + CatVTON Diffusion
+
+> Real-time garment try-on with photorealistic diffusion capture. Optimized for **4GB VRAM** GPUs.
+
+---
+
+## Overview
+
+Virtual Try-On Engine v10 is a hybrid pipeline that combines two complementary approaches:
+
+- **Live Warp** — Real-time perspective mesh warping at 15–25 FPS for instant feedback.
+- **CatVTON Diffusion** — Photorealistic Stable Diffusion inpainting triggered on demand (~5–8s), producing high-quality garment transfer results.
+
+The system detects body pose via MediaPipe, segments the user's silhouette, builds a torso quad, warps the garment onto it in real time, and optionally enhances any captured frame through a 4GB-VRAM-optimized diffusion pipeline.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  LIVE frames  →  Perspective Mesh Warp  →  ~50ms / frame   │
+│  CAPTURE tap  →  CatVTON Diffusion      →  ~5–8s           │
+└─────────────────────────────────────────────────────────────┘
+
+Phone / Client
+     │  base64 JPEG frames (WebSocket / stdin JSON)
+     ▼
+TryOnPipeline
+     ├── PoseExtractor      (MediaPipe Pose + EMA smoother)
+     ├── BodySegmenter      (MediaPipe SelfieSegmentation)
+     ├── build_body_quad()  (shoulder / hip landmarks → quad)
+     ├── suppress_torso()   (blur original clothing under quad)
+     ├── mesh_warp()        (6×8 perspective mesh warp)
+     ├── composite()        (alpha blend + arm occlusion)
+     └── CatVTONEngine      (SD Inpainting fp16, background thread)
+```
+
+---
+
+## 4GB VRAM Strategy
+
+| Approach | VRAM |
+|---|---|
+| CatVTON original | ~8 GB ❌ |
+| CatVTON fp16 | ~4.2 GB ❌ |
+| **This engine (SD Inpainting fp16)** | **~3.2 GB ✅** |
+
+Optimizations applied:
+
+- **float16 precision** — halves VRAM vs float32
+- **Attention slicing** (`enable_attention_slicing(1)`) — reduces peak VRAM by ~40%
+- **VAE tiling** (`enable_vae_tiling()`) — prevents OOM during decode
+- **xformers memory-efficient attention** — enabled automatically if installed
+- **Resolution 512×384** — instead of the original 768×1024
+- **Text encoder offloaded to CPU** after prompt encoding — saves ~500 MB VRAM
+
+---
+
+## Requirements
+
+### System
+
+- Python 3.9+
+- CUDA-capable GPU with 4 GB+ VRAM (CPU fallback available, ~30s per frame)
+- Webcam or video source
+
+### Python Dependencies
+
+Install once:
+
+```bash
+# PyTorch with CUDA 12.1
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# Diffusion + vision
+pip install diffusers transformers accelerate xformers
+
+# Pose, segmentation, utilities
+pip install mediapipe opencv-python numpy pillow rembg
+```
+
+> **Note:** `xformers` and `rembg` are optional but strongly recommended for performance and garment quality respectively.
+
+---
+
+## Usage
+
+### Demo Mode (webcam)
+
+```bash
+python tryon_engine.py --mode demo --garment garment.png
+```
+
+**Keyboard controls:**
+
+| Key | Action |
+|---|---|
+| `Q` | Quit |
+| `D` | Toggle debug overlay |
+| `C` | Capture frame and run diffusion enhancement |
+
+### Server Mode (Node.js / JSON bridge)
+
+```bash
+python tryon_engine.py --mode server --garment garment.png
+```
+
+The server reads newline-delimited JSON from `stdin` and writes results to `stdout`.
+
+**Request format:**
+
+```json
+{ "frame": "<base64 JPEG>", "enhance": false }
+```
+
+Set `"enhance": true` to trigger CatVTON diffusion on the captured frame (slower, photorealistic).
+
+**Optionally hot-swap the garment at runtime:**
+
+```json
+{ "garment": "new_shirt.png", "frame": "<base64 JPEG>" }
+```
+
+**Response format:**
+
+```json
+{
+  "success": true,
+  "frame": "<base64 JPEG>",
+  "landmarks": { "L_SHOULDER": [x, y], ... },
+  "virtual_hips": false,
+  "enhanced": false,
+  "error": null,
+  "latency_ms": 48.3
+}
+```
+
+---
+
+## Garment Image Guidelines
+
+- Preferred format: PNG with transparent background (BGRA)
+- If no alpha channel is present, white background is automatically removed via threshold + morphological cleanup
+- `rembg` is used automatically if installed for higher-quality background removal
+- Flat-lay product photos work best
+- Recommended minimum resolution: 512×512
+
+---
+
+## Configuration
+
+All tunable parameters live in the `Config` class at the top of `tryon_engine.py`:
+
+| Parameter | Default | Description |
+|---|---|---|
+| `PROC_W / PROC_H` | 640×480 | Live warp processing resolution |
+| `POSE_COMPLEXITY` | 1 | MediaPipe pose model complexity (0–2) |
+| `EMA_ALPHA` | 0.18 | Landmark smoothing factor (lower = smoother) |
+| `MESH_COLS / MESH_ROWS` | 6 × 8 | Warp mesh density |
+| `GARMENT_OPACITY` | 0.95 | Blended garment alpha |
+| `DIFF_H / DIFF_W` | 512 × 384 | Diffusion inference resolution |
+| `DIFF_STEPS` | 30 | Diffusion steps (20 = faster, 30 = better) |
+| `DIFF_GUIDANCE` | 2.5 | Classifier-free guidance scale |
+| `DIFF_DTYPE` | `fp16` | Precision (`fp16` for 4GB, `fp32` for 8GB+) |
+
+---
+
+## Pipeline — Step by Step
+
+1. **Frame ingestion** — JPEG frame decoded from base64, resized to processing resolution.
+2. **Pose extraction** — MediaPipe detects 33 body landmarks; EMA smoother reduces jitter.
+3. **Body segmentation** — SelfieSegmentation produces a torso/person mask.
+4. **Quad building** — Shoulder + hip landmarks expanded by configurable margins into a 4-point torso quad.
+5. **Drift limiting** — Quad movement capped per frame to eliminate jitter.
+6. **Torso suppression** — Original clothing blurred/darkened under the quad to reduce bleed-through.
+7. **Mesh warp** — Garment warped onto the quad using a 6×8 perspective mesh for natural draping.
+8. **Compositing** — Garment alpha-blended over frame; arm occlusion layer restores foreground arms.
+9. **[Optional] Diffusion enhance** — On capture, CatVTON inpainting generates a photorealistic result using person + garment concatenated as a side-by-side conditioning image.
+
+---
+
+## Performance
+
+| Mode | Hardware | FPS / Latency |
+|---|---|---|
+| Live warp | CPU | 15–25 FPS |
+| Live warp | GPU (OpenCV CUDA) | 25–40 FPS |
+| Diffusion enhance | 4GB CUDA GPU (fp16) | ~5–8s per capture |
+| Diffusion enhance | CPU | ~30s per capture |
+
+> The diffusion model (~3 GB) is downloaded from HuggingFace on first run (`runwayml/stable-diffusion-inpainting`). Subsequent runs load from cache.
+
+---
+
+## Project Structure
+
+```
+tryon_engine.py          # Main engine (all sections in one file)
+garment.png              # Default garment image (replace with your own)
+README.md                # This file
+```
+
+### Internal Sections
+
+| Section | Contents |
+|---|---|
+| 1 | Configuration (`Config` class) |
+| 2 | GPU helpers (OpenCV CUDA with CPU fallback) |
+| 3 | EMA landmark smoother |
+| 4 | Pose extractor (MediaPipe) |
+| 5 | Body segmenter (MediaPipe) |
+| 6 | Quad builder + drift limiter |
+| 7 | Garment loader (alpha extraction) |
+| 8 | Mesh warp engine |
+| 9 | Torso suppression |
+| 10 | Composite + arm occlusion |
+| 11 | CatVTON diffusion engine |
+| 12 | Garment preprocessor (rembg / fallback) |
+| 13 | Main `TryOnPipeline` class |
+| 14 | Node.js server bridge (stdin/stdout JSON) |
+| 15 | Demo mode (webcam + OpenCV window) |
+
+---
+
+## Troubleshooting
+
+**No pose detected**
+The last warped overlay is shown as a ghost (18% opacity) until pose is re-acquired. Ensure adequate lighting and that shoulders are fully visible.
+
+**Diffusion OOM error on 4GB GPU**
+Reduce `DIFF_H` / `DIFF_W` in `Config` (e.g. 384×288) or lower `DIFF_STEPS` to 20.
+
+**Slow live warp (CPU)**
+Install OpenCV with CUDA support to enable GPU-accelerated blur, warp, and morphology operations.
+
+**White garment background not removed**
+Install `rembg` (`pip install rembg`) for accurate background removal. Without it, only simple white-threshold removal is used.
+
+**xformers not found**
+Install with `pip install xformers`. If unavailable, the engine still runs correctly using attention slicing + VAE tiling.
+
+---
+
+## License
+
+MIT — use freely, attribution appreciated.
